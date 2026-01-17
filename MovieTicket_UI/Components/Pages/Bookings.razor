@@ -1,0 +1,185 @@
+@page "/user"
+@using MovieTicket.UI.Models
+@using MovieTicket.UI.Services
+@inject MovieApiService MovieService
+@inject BookingApiService BookingService
+
+<div class="container">
+
+@if (!isLoggedIn)
+{
+    <div class="login-wrapper">
+        <div class="login-card">
+
+            <h3>User Login</h3>
+
+            <input placeholder="Enter your name"
+                   @bind="userName" />
+
+            <button type="button" @onclick="Login">
+                Login
+            </button>
+
+        </div>
+    </div>
+}
+
+else
+{
+    <div style="display:flex; justify-content:space-between; align-items:center;">
+        <h3>Welcome @userName</h3>
+        <button class="logout-btn" type="button" @onclick="Logout">
+            Logout
+        </button>
+    </div>
+
+    <div class="section">
+        <h3>Movie List</h3>
+
+        <table>
+            <tr>
+                <th>Movie</th>
+                <th>Genre</th>
+                <th>Action</th>
+            </tr>
+
+            @foreach (var movie in movies)
+            {
+                <tr>
+                    <td>@movie.Title</td>
+                    <td>@movie.Genre</td>
+                    <td>
+                        <button type="button"
+                                @onclick="() => SelectMovie(movie.Id)">
+                            Book
+                        </button>
+                    </td>
+                </tr>
+            }
+        </table>
+    </div>
+
+    @if (selectedMovieId != 0)
+    {
+        <div class="section">
+            <h4>Book Ticket</h4>
+
+            <input type="number"
+                   placeholder="Tickets"
+                   @bind="booking.Tickets" />
+
+            <br />
+
+            <button type="button"
+                    @onclick="BookTicket">
+                Confirm Booking
+            </button>
+        </div>
+    }
+
+    <div class="section">
+        <h3>My Bookings</h3>
+
+        <table>
+            <tr>
+                <th>Movie Id</th>
+                <th>Tickets</th>
+                <th>Status</th>
+                <th>Action</th>
+            </tr>
+
+            @foreach (var b in bookings)
+            {
+                <tr>
+                    <td>@b.MovieId</td>
+                    <td>@b.Tickets</td>
+                    <td>@b.Status</td>
+                    <td>
+                        @if (b.Status == "Booked")
+                        {
+                            <button class="logout-btn"
+                                    type="button"
+                                    @onclick="() => Cancel(b.Id)">
+                                Cancel
+                            </button>
+                        }
+                    </td>
+                </tr>
+            }
+        </table>
+    </div>
+}
+</div>
+
+
+
+    @code {
+ 
+    string userName = "";
+    bool isLoggedIn = false;
+
+    List<Movie> movies = new();
+    List<Booking> bookings = new();
+
+    Booking booking = new Booking();
+    int selectedMovieId = 0;
+
+    async Task Login()
+    {
+        if (string.IsNullOrWhiteSpace(userName))
+            return;
+
+        isLoggedIn = true;
+
+        movies = await MovieService.GetMovies();
+        await LoadMyBookings();
+       
+    }
+
+    void Logout()
+    {
+        userName = "";
+        isLoggedIn = false;
+        movies.Clear();
+        bookings.Clear();
+        booking = new Booking();
+        selectedMovieId = 0;
+    }
+
+    async Task LoadMyBookings()
+    {
+        var allBookings = await BookingService.GetBookings();
+
+        bookings = allBookings
+            .Where(b =>
+                b.CustomerName != null &&
+                b.CustomerName.Trim().ToLower() ==
+                userName.Trim().ToLower())
+            .ToList();
+    }
+
+    void SelectMovie(int id)
+    {
+        selectedMovieId = id;
+         
+    }
+
+    async Task BookTicket()
+    {
+        booking.MovieId = selectedMovieId;
+        booking.CustomerName = userName;
+
+        await BookingService.CreateBooking(booking);
+
+        booking = new Booking();
+        selectedMovieId = 0;
+
+        await LoadMyBookings();
+    }
+
+    async Task Cancel(int id)
+    {
+        await BookingService.CancelBooking(id);
+        await LoadMyBookings();
+    }
+}

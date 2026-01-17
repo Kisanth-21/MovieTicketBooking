@@ -1,0 +1,70 @@
+@page "/admin"
+@using MovieTicket.UI.Models
+@using MovieTicket.UI.Services
+@inject MovieApiService MovieService
+
+
+<div class="container">
+
+<h3>Admin - Movies</h3>
+
+<input placeholder="Title" @bind="movie.Title" />
+<br />
+<input placeholder="Genre" @bind="movie.Genre" />
+<br />
+
+<button type="button" @onclick="AddMovie">
+    Add Movie
+</button>
+
+<div class="section">
+    <table>
+        <tr>
+            <th>Title</th>
+            <th>Genre</th>
+            <th>Action</th>
+        </tr>
+
+        @foreach (var m in movies)
+        {
+            <tr>
+                <td>@m.Title</td>
+                <td>@m.Genre</td>
+                <td>
+                    <button class="logout-btn"
+                            type="button"
+                            @onclick="() => Delete(m.Id)">
+                        Delete
+                    </button>
+                </td>
+            </tr>
+        }
+    </table>
+</div>
+
+</div>
+
+
+@code {
+
+    List<Movie> movies = new();
+    Movie movie = new Movie();
+
+    protected override async Task OnInitializedAsync()
+    {
+        movies = await MovieService.GetMovies();
+    }
+
+    async Task AddMovie()
+    {
+        await MovieService.AddMovie(movie);
+        movie = new Movie();
+        movies = await MovieService.GetMovies();
+    }
+
+    async Task Delete(int id)
+    {
+        await MovieService.DeleteMovie(id);
+        movies = await MovieService.GetMovies();
+    }
+}
